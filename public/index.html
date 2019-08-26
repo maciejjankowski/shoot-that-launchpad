@@ -1,0 +1,171 @@
+<!-- This is a static file -->
+<!-- served from your routes in server.js -->
+
+<!-- You might want to try something fancier: -->
+<!-- html/nunjucks docs: http://mozilla.github.io/nunjucks/ -->
+<!-- jade: http://jade-lang.com/ -->
+<!-- haml: http://haml.info/tutorial.html -->
+<!-- hbs(handlebars): http://handlebarsjs.com/expressions.html -->
+
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Abrupt Peanut</title>
+    <meta name="description" content="A cool thing made with HyperDev">
+    <link id="favicon" rel="icon" href="https://cdn.glitch.com/6d5d6d05-a213-4c88-b367-619df461ca1a%2Ffavicon.ico?1507996145635" type="image/x-icon">
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <script src="https://cdn.jsdelivr.net/npm/vue"></script>
+    <script src="https://cdn.jsdelivr.net/npm/webmidi"></script>
+    <link rel="stylesheet" href="/style.css">
+    
+<!--     <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.5/popper.js"></script> -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.2/umd/popper.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+    
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-beta/css/bootstrap.min.css" integrity="sha384-/Y6pD6FV/Vv2HJnA6t+vslU6fwYXjCFtcEpHbNJ0lyAFsXTsjBbfaDjzALeQsN6M" crossorigin="anonymous">
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-beta/js/bootstrap.min.js" integrity="sha384-h0AbiXch4ZDo7tp9hKZ4TsHbi047NrKGLO3SEJAg45jXxnGIfYzk4Si90RDIqNm1" crossorigin="anonymous"></script>
+    
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="/io-p2p.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/riot@3.7/riot+compiler.min.js"></script>
+  </head>
+  <body >
+  
+
+  <div id="app" class="container">
+<h1 v-if="error">{{error}}</h1>
+    <div v-if="false">
+      
+    <h2>
+    sendMessage  
+    </h2>
+    <input type="text" placeholder="message" v-model="message">
+    <input type="text" placeholder="type" v-model="type">
+    <button v-on:click="sendMessage">
+      &raquo;
+    </button>
+    </div>
+    
+    
+    
+    <hr>
+    <div>
+      <h2>
+        Launchpad Timer
+      </h2>
+      <input type="number" min="1" max="99" step="0.1" v-model="minutes">
+      <button v-on:click="setTimer">
+        &raquo;
+      </button>
+    </div>
+  </div><!-- app div -->
+
+<canvas id="drawCanvas" width="400" height="300"></canvas>
+
+<script>
+  const CLEAR_MESSAGE = [176, 0, 0]
+  const COLOR_OFF = 0x0C
+  const COLOR_RED_LOW = 0x0D
+  const COLOR_RED_FULL = 0x0F
+  const COLOR_AMBER_LOW = 0x1D
+  const COLOR_AMBER_FULL = 0x3F
+  const COLOR_YELLOW_FULL = 0x3E
+  const COLOR_GREEN_LOW = 0x1C
+  const COLOR_GREEN_FULL = 0x3C
+  
+  const COLORS = [
+    COLOR_OFF,
+    COLOR_RED_LOW,
+    COLOR_AMBER_LOW,
+    // COLOR_YELLOW_FULL,
+    COLOR_GREEN_LOW
+    ]
+    
+  var app = new Vue({
+  el: '#app',
+  data: {
+    error: '',
+    midiInputPorts : [{'name':'x'}],
+    midiOutputPorts : [{'name':'x'}],
+    midiChannel : 0x90,
+    message : '',
+    type : '',
+    minutes : 1,
+    currentColor : COLOR_AMBER_FULL,
+    switchColor : COLOR_AMBER_FULL
+  },
+  methods:{
+    sendMessage : ()=>{
+      let msg = app.message;
+      let type = app.type;
+      p2p.emit(type, msg);
+    },
+  setTimer : function setTimer(ev, color = COLOR_AMBER_LOW){
+    let tick = app.minutes / 64 * 60 * 1000;
+    let tick_1_minute = 3 / 64 * 60 * 1000;
+    let tick_3_minutes = 3 / 64 * 60 * 1000;
+    
+    for (let i = 0; i < 64; i++){
+      setTimeout(() => {lightUp(spiral_m[i], COLOR_AMBER_LOW)}, 10 * i)
+    }
+    
+    for (let i = 0; i < 64; i++){
+      setTimeout(() => {lightUp(spiral_m[i], COLOR_OFF)}, tick * i)
+    }
+
+    setTimeout(()=>{
+      
+      for (let i = 0; i < 64; i++){
+        setTimeout(() => {lightUp(spiral_m[i], COLOR_RED_LOW)}, 10 * i)
+      }
+      for (let i = 0; i < 64; i++){
+        setTimeout(() => {lightUp(spiral_m[i], COLOR_OFF)}, tick_3_minutes * i)
+      }
+    }, tick*(64 + 1) );
+  }
+}});
+
+    
+  
+$(()=>{
+  socket.on('o', function(msg){
+    beta = msg.beta;
+    gamma = msg.gamma || 0;
+    alpha = msg.alpha;
+    
+    gamma += 60;
+    let gMin = Math.min(gamma, 127);
+    let gMax = Math.max(gMin, 0);
+    app.gamma = Math.round(gMax);
+    
+    if (location.search === '?host'){
+      msend([176, 74, app.gamma]);        
+    }
+  });
+})
+  
+// $(()=>{
+//   return console.warn("this is skipped");
+//   var canvasInput = document.getElementById('drawCanvas');
+//   var cc = canvasInput.getContext('2d');
+//   var ctracker = new clm.tracker();
+//   ctracker.init();
+//   ctracker.start(videoInput);
+    
+//   function drawLoop() {
+//     requestAnimationFrame(drawLoop);
+//     cc.clearRect(0, 0, canvasInput.width, canvasInput.height);
+//     ctracker.draw(canvasInput);
+//   }
+//   drawLoop();
+// });
+  
+</script>    
+<!--     <script src="/clmtracker.js"></script> -->
+
+    <script src="/client.js"></script>
+    <script src="/midi.js"></script>
+  </body>
+</html>
